@@ -235,6 +235,8 @@ void	min_extract(int *a, int *b, int *size_a, int *size_b)
 		}
 		pb(a, b, size_a, size_b);
 	}
+    while (*size_b > 0)
+        pa(a, b, size_a, size_b);
 }
 
 // extract the maximum index in b and push it in the stack a
@@ -285,8 +287,8 @@ static int *rank_numbers(int *a, int size_a){
     return (rank_arr);
 }
 
-// medium algorithm to sort the stack a (chunk sorting)
-void	medium_sort(int *a, int *b, int *size_a, int *size_b)
+// medium algorithm to sort the stack a (block sorting)
+void	block_sort(int *a, int *b, int *size_a, int *size_b)
 {
 	int	*rank;
 	int	block;
@@ -307,6 +309,7 @@ void	medium_sort(int *a, int *b, int *size_a, int *size_b)
 	block = 1;
 	while (block * block < *size_a)
 		block++;
+    // double the block to decrease operation in large size
     block = block * 2;
 	low = 0;
 	while (*size_a > 0)
@@ -320,11 +323,58 @@ void	medium_sort(int *a, int *b, int *size_a, int *size_b)
 				pushed++;
 			}
 			else
-				ra(a, *size_a);
+            {
+                ra(a, *size_a);
+            }
 		}
 		low += block;
 	}
     max_extract(a, b, size_a, size_b);
+}
+
+// radix sort
+void radix_sort(t_stacks *s, int bit)
+{
+    int i;
+    int max_bits;
+    int max_num;
+    int size;
+    int *rank;
+   
+    max_bits = 0;
+    max_num = s->size_a - 1;
+    size = s->size_a;
+
+    rank = rank_numbers(s->a, s->size_a);
+    if (!rank)
+        return ;
+    i = 0;
+    while (i < s->size_a)
+    {
+        s->a[i] = rank[i];
+        i++;
+    }
+    free(rank);
+    while (max_num > 0)
+    {
+       max_num = max_num / 2;
+       max_bits ++;
+    } 
+    while (bit < max_bits)
+    {
+        i = 0;
+        while (i < size)
+        {
+            if (((s->a[0] >> bit) & 1) == 0)
+                pb(s->a, s->b, &s->size_a, &s->size_b);
+            else
+                ra(s->a, s->size_a);
+            i++;
+        }
+        while (s->size_b > 0)
+            pa(s->a, s->b, &s->size_a, &s->size_b);  
+        bit ++;
+    }
 }
 
 int main(int argc, char* argv[]){
@@ -334,6 +384,9 @@ int main(int argc, char* argv[]){
     int size_b;
     int *stack_a;
     int *stack_b;
+    t_stacks	s;
+    float disorder;
+
 
     if (argc > 1 && ft_strncmp(argv[1], "--", 2) == 0){
         i = 2;
@@ -347,6 +400,11 @@ int main(int argc, char* argv[]){
     size_b = 0;
     stack_a = malloc(size_a * sizeof(int));
     stack_b = malloc(size_a * sizeof(int));
+
+    s.a = stack_a;
+    s.b = stack_b;
+    s.size_a = size_a;
+    s.size_b = size_b;
     if (!stack_a || !stack_b)
         return (0);
     j = 0;
@@ -356,8 +414,6 @@ int main(int argc, char* argv[]){
         i++;
         j++;
     }
-    count_disorder(stack_a, size_a);
-    // printf("Disorder: %.2f%%\n", res * 100);
 
     /** Test extract minimum number */
     if (argc > 1 && ft_strncmp(argv[1], "--", 2) == 0)
@@ -365,20 +421,20 @@ int main(int argc, char* argv[]){
         if (ft_strncmp(argv[1], "--simple", 8) == 0)
         {
             min_extract(stack_a, stack_b, &size_a, &size_b);
-            // i = 0;
-            // while (size_b > 0)
-            // {
-            //     pa(stack_a, stack_b, &size_a, &size_b);
-            // }
-            // while (i < size_a)
-            // {
-            //     printf("%d ", stack_a[i]);
-            //     i++;
-            // }
+            i = 0;
+            while (size_b > 0)
+            {
+                pa(stack_a, stack_b, &size_a, &size_b);
+            }
+            while (i < size_a)
+            {
+                printf("%d ", stack_a[i]);
+                i++;
+            }
         } 
         else if (ft_strncmp(argv[1], "--medium", 8) == 0)
         {
-            medium_sort(stack_a, stack_b, &size_a, &size_b);
+            block_sort(stack_a, stack_b, &size_a, &size_b);
             // i = 0;
             // printf("Stack a: \n");
             // while (i < size_a)
@@ -388,80 +444,36 @@ int main(int argc, char* argv[]){
             // }
             // printf("\n");
         }
+        else if (ft_strncmp(argv[1], "--complex", 9) == 0)
+        {
+            radix_sort(&s, 0);
+            i = 0;
+            printf("Stack a: \n");
+            while (i < s.size_a)
+            {
+                printf("%d ", s.a[i]);
+                i++;
+            }
+            printf("\n");
+            printf("Stack b: \n");
+            i = 0;
+            while (i < s.size_b)
+            {
+                printf("%d ", s.b[i]);
+                i++;
+            }
+            printf("\n");
+        }
 
     } else {
-        min_extract(stack_a, stack_b, &size_a, &size_b);
-        // i = 0;
-        // while (size_b > 0)
-        // {
-        //     pa(stack_a, stack_b, &size_a, &size_b);
-        // }
-        // while (i < size_a)
-        // {
-        //     printf("%d ", stack_a[i]);
-        //     i++;
-        // }
+        disorder = count_disorder(stack_a, size_a);
+        if (disorder < 0.2)
+            min_extract(stack_a, stack_b, &size_a, &size_b);
+        else if (disorder < 0.5)
+            block_sort(stack_a, stack_b, &size_a, &size_b);
+        else
+            radix_sort(&s, 0);
     }
-    // printf("\n-------------------------\n");
-    // int *rank = rank_numbers(stack_a, size_a);
-    // i = 0;
-    // while (i < size_a)
-    // {
-    //     printf("%d ", rank[i]);
-    //     i++;
-    // }
-    // printf("\n");
-
-    /** Test ra */
-    // ra(stack_a, size_a);
-    // i = 0;
-    // while (i < size_a)
-    // {
-    //     printf("%d ", stack_a[i]);
-    //     i++;
-    // }
-    // printf("\n-------------------------\n");
-    // /** Test rra */
-    // rra(stack_a, size_a);
-    // i = 0;
-    // while (i < size_a)
-    // {
-    //     printf("%d ", stack_a[i]);
-    //     i++;
-    // }
-    // printf("\n-------------------------\n");
-    // /** Test pb */
-    // pb(stack_a, stack_b, &size_a, &size_b);
-    // i = 0;
-    // while (i < size_a)
-    // {
-    //     printf("%d ", stack_a[i]);
-    //     i++;
-    // }
-    // printf("\n-------------------------\n");
-    // /** Test pa */
-    // pa(stack_a, stack_b, &size_a, &size_b); // &size_a and &size_b => pass it as an address because the pb function will update its value
-    // i = 0;
-    // while (i < size_a)
-    // {
-    //     printf("%d ", stack_a[i]);
-    //     i++;
-    // }
-    // printf("\n-------------------------\n");
-    // /** Test sa */
-    // sa(stack_a, size_a);
-    // i = 0;
-    // while (i < size_a)
-    // {
-    //     printf("%d ", stack_a[i]);
-    //     i++;
-    // }
-    // /** Test min_index */
-    // printf("\n-------------------------\n");
-    // min_num = min_index(stack_a, size_a);
-    // printf("Index of the min number: %d ", min_num);
-
-    // printf("\n");
     free(stack_a);
     free(stack_b);
     return (0);
